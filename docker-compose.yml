@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  app:
+    image: php:8.1-apache
+    container_name: php_app
+    volumes:
+      - .:/var/www/html
+      - .env:/var/www/html/.env
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+    environment:
+      - APACHE_DOCUMENT_ROOT=/var/www/html/public
+    command: >
+      bash -c "apt-get update && apt-get install -y libpq-dev && docker-php-ext-install pdo pdo_mysql && \
+               a2enmod rewrite && \
+               sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|' /etc/apache2/sites-available/000-default.conf && \
+               echo '<Directory /var/www/html/public>
+                   AllowOverride All
+                   Require all granted
+               </Directory>' >> /etc/apache2/sites-available/000-default.conf && \
+               apachectl -D FOREGROUND  &
+               sleep 5 &&
+               php database/migrate.php"
+
+  db:
+    image: mysql:8.0
+    container_name: mysql_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: loteria
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+volumes:
+  db_data:
